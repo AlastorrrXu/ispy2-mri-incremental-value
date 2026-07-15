@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the repository and the associated manuscript when available."
+title: "I-SPY2 Pretreatment DCE-MRI Incremental-Value Transformer"
+type: software
+authors:
+  - family-names: Xu
+    given-names: Duorui
+repository-code: "https://github.com/AlastorrrXu/ispy2-mri-incremental-value"
+license: MIT
+version: 0.1.0
+date-released: 2026-07-15
+abstract: "A multimodal research pipeline for evaluating the incremental predictive value of pretreatment DCE-MRI beyond clinical biology and treatment variables for pathologic complete response prediction in I-SPY2."
+keywords:
+  - breast MRI
+  - I-SPY2
+  - pathologic complete response
+  - multimodal learning
+  - transformer
+  - incremental value
