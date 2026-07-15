@@ -1,30 +1,32 @@
 # I-SPY2 Pretreatment DCE-MRI Incremental-Value Transformer
 
-A research pipeline for testing whether pretreatment dynamic contrast-enhanced breast MRI adds predictive value beyond clinical biology and known treatment regimen when predicting pathologic complete response (pCR) in I-SPY2.
+A research repository for evaluating whether pretreatment dynamic contrast-enhanced breast MRI adds predictive value beyond clinical biology and the known treatment regimen when predicting pathologic complete response in I-SPY2.
 
 ## Research question
 
-The primary question is not merely whether MRI can predict pCR. It is whether MRI contributes measurable out-of-sample value beyond a clinically informed baseline containing patient biology and treatment variables.
+The primary question is not merely whether MRI predicts pCR. It is whether MRI contributes measurable held-out predictive value beyond a clinically informed baseline containing patient biology and treatment variables.
 
-The repository therefore compares three independently evaluated models:
+The planned comparison contains three models:
 
 1. Clinical and treatment tabular model
 2. Pretreatment DCE-MRI image model
 3. Multimodal fusion model
 
-The prespecified primary comparison is fusion versus the tabular baseline on the held-out test set.
+The prespecified primary comparison is fusion versus the tabular baseline on the same held-out test patients.
 
 ## Method summary
 
-The imaging branch uses a 3D ConvNeXt encoder to process three DCE phases. Global, tumor, and peritumoral region tokens are extracted from each phase and integrated by a Transformer. The tabular branch tokenizes clinical and treatment variables with learned missing-value embeddings. Bidirectional gated cross-attention performs multimodal fusion.
+The imaging branch uses a 3D ConvNeXt encoder for three DCE phases. Global, tumor, and peritumoral tokens are integrated by a Transformer. The tabular branch tokenizes clinical and treatment variables with learned missing-value embeddings. Bidirectional gated cross-attention performs multimodal fusion.
 
-Predictions are temperature-calibrated using validation data. Incremental value is quantified using paired stratified bootstrap confidence intervals for changes in AUROC, AUPRC, Brier score, and log loss. The pipeline also exports subgroup analyses and decision-curve data.
+Predictions are calibrated using validation-only temperature scaling. Incremental value is quantified with paired stratified bootstrap confidence intervals for changes in AUROC, AUPRC, Brier score, and log loss. The analysis plan also includes subgroup evaluation and decision-curve analysis.
 
-See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for the full methodological specification.
+See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for the full specification.
 
 ## Repository status
 
-The implementation and analysis plan are provided. Numerical results are intentionally left blank until the locked experiment is completed.
+This public repository currently contains the study design, contribution statement, data and ethics guidance, citation metadata, dependency list, and a blank results template. Numerical results are intentionally omitted until completion of the locked experiment.
+
+The complete executable pipeline is retained locally while the manifest construction, data split, privacy safeguards, and release readiness are checked. See [src/README.md](src/README.md).
 
 ## Project structure
 
@@ -35,7 +37,7 @@ The implementation and analysis plan are provided. Numerical results are intenti
 ├── CITATION.cff
 ├── requirements.txt
 ├── src/
-│   └── ispy2_incremental_transformer.py
+│   └── README.md
 ├── docs/
 │   ├── METHODOLOGY.md
 │   ├── CONTRIBUTIONS.md
@@ -44,61 +46,35 @@ The implementation and analysis plan are provided. Numerical results are intenti
     └── RESULTS_TEMPLATE.md
 ```
 
-## Installation
-
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS or Linux
-source .venv/bin/activate
-
-python -m pip install -r requirements.txt
-```
-
-Install the CUDA-compatible PyTorch build using the official PyTorch installation selector when GPU training is required.
-
-## Running the pipeline
-
-Edit the `RunConfig` block in the script if necessary, then run:
-
-```bash
-python src/ispy2_incremental_transformer.py
-```
-
-The script downloads the official BreastDCEDL I-SPY2 MinCrop data when needed, constructs a locked patient-level split, trains the three models, calibrates predictions, and exports patient-level and aggregate analyses.
-
-## Expected outputs
-
-The main outputs are:
+## Planned outputs
 
 ```text
-ispy2_results/analysis/model_performance.csv
-ispy2_results/analysis/incremental_value_bootstrap.csv
-ispy2_results/analysis/test_predictions_all_models.csv
-ispy2_results/analysis/subgroup_performance.csv
-ispy2_results/analysis/decision_curve.csv
-ispy2_results/analysis/incremental_value_summary.json
+model_performance.csv
+incremental_value_bootstrap.csv
+test_predictions_all_models.csv
+subgroup_performance.csv
+decision_curve.csv
+incremental_value_summary.json
 ```
 
 ## Reproducibility principles
 
-The experiment uses a fixed random seed, a locked train/validation/test manifest, patient-level evaluation, validation-only calibration, paired testing on identical test patients, and machine-readable exports. Model selection is based on validation AUPRC. The test set is reserved for final reporting.
+The planned experiment uses a locked patient-level train, validation, and test manifest, validation-only model selection and calibration, paired comparison on identical test patients, and machine-readable exports. The test set is reserved for final reporting.
 
 ## Important limitations
 
-This is retrospective research code, not a clinical device. Treatment variables condition prediction under observed or assigned regimens and must not be interpreted as causal treatment recommendations. External validation is required before clinical interpretation. Because model capacity may be large relative to the cohort, overfitting and calibration instability must be assessed explicitly.
+This is retrospective research, not a clinical device. Treatment variables condition prediction under observed or assigned regimens and must not be interpreted as causal treatment recommendations. External validation is required before clinical interpretation.
 
 ## Data availability
 
-The code references the official BreastDCEDL and I-SPY2-derived public resources. Data are downloaded from their original hosts and are not redistributed in this repository. Users are responsible for complying with the source dataset terms and citation requirements.
+Data are not redistributed in this repository. Users must obtain the official BreastDCEDL and I-SPY2-derived resources from their original hosts and comply with the applicable terms and citation requirements.
 
 ## Authors and credit
 
-Initial methodology and implementation: **Duorui Xu**.
+Initial conceptualization, methodology, and implementation: **Duorui Xu**.
 
-Clinical collaborators, imaging specialists, statistical reviewers, and additional contributors should be added according to substantive contribution before submission. See [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md).
+Clinical collaborators, imaging specialists, statistical reviewers, and supervisors should be added according to substantive contribution before submission. See [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md).
 
 ## License
 
-Code is released under the MIT License. Dataset licenses and terms remain governed by the original data providers.
+Repository-authored code and documentation are released under the MIT License. Dataset terms remain governed by the original providers.
