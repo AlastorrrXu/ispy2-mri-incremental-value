@@ -1,0 +1,7 @@
+numpy
+pandas
+nibabel
+scikit-learn
+requests
+tqdm
+torch
