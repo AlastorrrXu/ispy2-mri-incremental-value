@@ -147,7 +147,7 @@ The test must remain locked until the internal analysis, endpoints, code, and in
 ispy2_final_research_results/
 ├── 00_protocol/
 ├── 10_secondary_v5/
-├── 20_primary_v7_0_1/
+├── 20_primary_v7_0/
 ├── ISPY2_FINAL_RESEARCH_SUMMARY.xlsx
 └── FINAL_RESULT_INDEX.json
 ```
