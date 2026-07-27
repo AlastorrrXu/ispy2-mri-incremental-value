@@ -1,80 +1,149 @@
-# I-SPY2 Pretreatment DCE-MRI Incremental-Value Transformer
+# I-SPY2 pretreatment DCE-MRI incremental-value study
 
-A research repository for evaluating whether pretreatment dynamic contrast-enhanced breast MRI adds predictive value beyond clinical biology and the known treatment regimen when predicting pathologic complete response in I-SPY2.
+## Frozen one-file research release v1.4.0
 
-## Research question
-
-The primary question is not merely whether MRI predicts pCR. It is whether MRI contributes measurable held-out predictive value beyond a clinically informed baseline containing patient biology and treatment variables.
-
-The planned comparison contains three models:
-
-1. Clinical and treatment tabular model
-2. Pretreatment DCE-MRI image model
-3. Multimodal fusion model
-
-The prespecified primary comparison is fusion versus the tabular baseline on the same held-out test patients.
-
-## Method summary
-
-The imaging branch uses a 3D ConvNeXt encoder for three DCE phases. Global, tumor, and peritumoral tokens are integrated by a Transformer. The tabular branch tokenizes clinical and treatment variables with learned missing-value embeddings. Bidirectional gated cross-attention performs multimodal fusion.
-
-Predictions are calibrated using validation-only temperature scaling. Incremental value is quantified with paired stratified bootstrap confidence intervals for changes in AUROC, AUPRC, Brier score, and log loss. The analysis plan also includes subgroup evaluation and decision-curve analysis.
-
-See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for the full specification.
-
-## Repository status
-
-This public repository currently contains the study design, contribution statement, data and ethics guidance, citation metadata, dependency list, and a blank results template. Numerical results are intentionally omitted until completion of the locked experiment.
-
-The complete executable pipeline is retained locally while the manifest construction, data split, privacy safeguards, and release readiness are checked. See [src/README.md](src/README.md).
-
-## Project structure
+The executable release is a single Python file:
 
 ```text
-.
-├── README.md
-├── LICENSE
-├── CITATION.cff
-├── requirements.txt
-├── src/
-│   └── README.md
-├── docs/
-│   ├── METHODOLOGY.md
-│   ├── CONTRIBUTIONS.md
-│   └── DATA_AND_ETHICS.md
-└── results/
-    └── RESULTS_TEMPLATE.md
+ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py
 ```
 
-## Planned outputs
+The user only keeps and runs this file. It contains two SHA-256-verified, readable source components and extracts them into the run audit directory:
+
+1. **Exact v5 secondary/mechanistic pipeline**
+   - `T01_C0_L2_Logistic`: clinical biology
+   - `T02_C1_L2_Logistic`: clinical biology plus treatment assigned before the first NAT dose
+   - `T03_C2_L2_Logistic`: C1 plus conventional MRI features
+   - `M10_AX3_MULTI6_MRI_ONLY_BCE`: MRI-only six-channel Axial 3D model
+   - `D01-D06`: phase and kinetic ablations
+   - `D07-D09`: tumor/peritumoral spatial ablations
+   - `D10`: full six-channel end-to-end sensitivity model
+
+2. **Frozen v7.0.1 primary pipeline**
+   - official primary comparison: `S10_C1_PLUS_MRI_STACK_NESTED` versus matched `S00_C1_RECALIBRATED_NESTED`
+   - 5 outer folds × 3 fixed split seeds
+   - 4 inner folds
+   - 3 fixed MRI initialization members
+   - fixed L2 meta-model `C=0.1`
+   - 120 epochs; patience 20
+   - inner-selection-only soft-collapse retry/keep-best rule, fully audited
+   - Nadeau-Bengio corrected repeated-CV inference
+   - 5000 bootstrap replicates
+
+The v7.0.1 result is a **new prospectively frozen primary analysis**. It must not be selected against older v6.x workbooks according to whichever result looks better.
+
+## Reconstructing the one-file release from this repository
+
+The GitHub branch stores the exact source in ordered integrity-checked parts. Run:
+
+```bash
+python assemble_final_release.py
+```
+
+This writes `ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py` and verifies SHA-256:
 
 ```text
-model_performance.csv
-incremental_value_bootstrap.csv
-test_predictions_all_models.csv
-subgroup_performance.csv
-decision_curve.csv
-incremental_value_summary.json
+0d90623bbbb1419d5e658621c1a2a361babc9da7926cfb68fb99dfdd7f91525c
 ```
 
-## Reproducibility principles
+The assembled file is byte-identical to the downloadable local one-file release.
 
-The planned experiment uses a locked patient-level train, validation, and test manifest, validation-only model selection and calibration, paired comparison on identical test patients, and machine-readable exports. The test set is reserved for final reporting.
+## What counts as the final result
 
-## Important limitations
+A full run is the final **internal-validation** result only when all of the following are true:
 
-This is retrospective research, not a clinical device. Treatment variables condition prediction under observed or assigned regimens and must not be interpreted as causal treatment recommendations. External validation is required before clinical interpretation.
+- the command does not include `--quick` or `--allow-cohort-drift`;
+- the frozen cohort preflight passes;
+- all expected v5 and v7.0.1 outputs are present;
+- `FINAL_RESULT_INDEX.json` reports `status: passed` and no scientific-validation errors;
+- the code, seeds, endpoints, and interpretation are not changed after seeing the results;
+- the locked test has not been used during development.
 
-## Data availability
+The official primary estimate is the v7.0.1 S10-versus-S00 comparison. v5 T01-T03, M10, and D01-D10 are secondary/mechanistic analyses. The legacy v5 stack is context only.
 
-Data are not redistributed in this repository. Users must obtain the official BreastDCEDL and I-SPY2-derived resources from their original hosts and comply with the applicable terms and citation requirements.
+## Required inputs
 
-## Authors and credit
+Only the real study data are required:
 
-Initial conceptualization, methodology, and implementation: **Duorui Xu**.
+```text
+manifest.csv
+research_cache/
+```
 
-Clinical collaborators, imaging specialists, statistical reviewers, and supervisors should be added according to substantive contribution before submission. See [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md).
+No JSON configuration and no Model-Zoo workbook are required. Put the data beside the script or pass the two paths explicitly.
 
-## License
+## Recommended Windows sequence
 
-Repository-authored code and documentation are released under the MIT License. Dataset terms remain governed by the original providers.
+### 1. Self-test
+
+```powershell
+& "C:/Users/LENOVO/AppData/Local/Programs/Python/Python310/python.exe" `
+  "E:/Downloads/ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py" `
+  --self-test
+```
+
+### 2. Full data preflight
+
+```powershell
+& "C:/Users/LENOVO/AppData/Local/Programs/Python/Python310/python.exe" `
+  "E:/Downloads/ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py" `
+  --preflight `
+  --manifest "E:/ISPY2/manifest.csv" `
+  --research-cache "E:/ISPY2/research_cache"
+```
+
+### 3. Review the frozen command plan
+
+```powershell
+& "C:/Users/LENOVO/AppData/Local/Programs/Python/Python310/python.exe" `
+  "E:/Downloads/ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py" `
+  --dry-run `
+  --manifest "E:/ISPY2/manifest.csv" `
+  --research-cache "E:/ISPY2/research_cache"
+```
+
+### 4. Full frozen internal-validation run
+
+```powershell
+& "C:/Users/LENOVO/AppData/Local/Programs/Python/Python310/python.exe" `
+  "E:/Downloads/ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py" `
+  --manifest "E:/ISPY2/manifest.csv" `
+  --research-cache "E:/ISPY2/research_cache"
+```
+
+The identical command may be rerun after interruption; compatible artifacts are resumed. Do not use `--force-retrain` unless a documented technical failure requires a full rebuild.
+
+## Fixed reproducibility settings
+
+- global seed: `20260724`
+- outer split seeds: `20260724, 20260725, 20260726`
+- MRI initialization offsets: `0, 1000, 2000`
+- DataLoader workers: `0` by default
+- cuDNN deterministic: enabled
+- cuDNN benchmark: disabled
+- TF32: disabled
+- deterministic PyTorch algorithms: warning mode by default; `--strict-determinism` makes unsupported operations fatal
+- precision is resolved once and included in the frozen run signature
+
+Different GPU, CUDA, cuDNN, or PyTorch stacks may still prevent bitwise-identical probabilities. The release records the software/hardware environment, code hashes, input signatures, commands, and output hashes.
+
+## Output structure
+
+```text
+ispy2_final_research_results/
+├── 00_protocol/
+├── 10_secondary_v5/
+├── 20_primary_v7_0/
+├── ISPY2_FINAL_RESEARCH_SUMMARY.xlsx
+└── FINAL_RESULT_INDEX.json
+```
+
+## Important methodological boundary
+
+The architecture was fixed after earlier model-development work. The strict nested rerun prevents leakage within the frozen analysis, but it cannot erase all earlier architecture-selection history. The result is therefore internal validation; independent confirmation requires the one-time locked test or an external cohort.
+
+## Locked test
+
+The test split is locked by default. Secondary v5 analyses are never allowed to unlock it through this wrapper. A one-time v7.0.1 primary test run requires explicit confirmation and a completed treatment-time audit. Do not unlock the test until the internal analysis, manuscript endpoints, code hash, and interpretation are frozen.
+
+Research use only. This pipeline is not a clinical device and does not estimate individualized causal treatment effects.
