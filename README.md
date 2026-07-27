@@ -8,7 +8,7 @@ The executable release is a single Python file:
 ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py
 ```
 
-The user only keeps and runs this file. It contains two SHA-256-verified, readable source components and extracts them into the run audit directory:
+The user keeps and runs only this file. It contains two SHA-256-verified, readable source components and extracts them into the run audit directory:
 
 1. **Exact v5 secondary/mechanistic pipeline**
    - `T01_C0_L2_Logistic`: clinical biology
@@ -32,21 +32,15 @@ The user only keeps and runs this file. It contains two SHA-256-verified, readab
 
 The v7.0.1 result is a **new prospectively frozen primary analysis**. It must not be selected against older v6.x workbooks according to whichever result looks better.
 
-## Reconstructing the one-file release from this repository
+## Release status
 
-The GitHub branch stores the exact source in ordered integrity-checked parts. Run:
-
-```bash
-python assemble_final_release.py
-```
-
-This writes `ispy2_FINAL_RESEARCH_FROZEN_v1_4_0.py` and verifies SHA-256:
+The final local one-file artifact is frozen by this SHA-256:
 
 ```text
 0d90623bbbb1419d5e658621c1a2a361babc9da7926cfb68fb99dfdd7f91525c
 ```
 
-The assembled file is byte-identical to the downloadable local one-file release.
+This branch contains the final protocol, methodology, dependencies, and validation record. The large one-file artifact should be added as a GitHub Release asset or committed only after its SHA-256 matches `SHA256SUMS.txt`; this branch must not be merged while the artifact is absent.
 
 ## What counts as the final result
 
