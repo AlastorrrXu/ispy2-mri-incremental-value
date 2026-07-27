@@ -1,130 +1,134 @@
-# Methodology
+# Methodology — frozen release v1.4.0
 
-## 1. Objective
+## 1. Scientific question
 
-The study evaluates the incremental predictive value of pretreatment DCE-MRI for pathologic complete response after accounting for clinical biology and the known treatment regimen.
+The study asks whether pretreatment DCE-MRI provides incremental predictive information for pathologic complete response (pCR) after clinical biology and the treatment regimen assigned before the first neoadjuvant-therapy dose are already known.
 
-Primary estimand:
+This is a prediction study conditional on baseline treatment assignment. It is not a causal treatment-effect or treatment-selection analysis.
 
-> Difference in held-out predictive performance between the multimodal fusion model and the clinical-treatment tabular model on the same patients.
+## 2. Analysis hierarchy
 
-This framing distinguishes incremental clinical information from standalone image classification performance.
+### Primary internal-validation analysis
 
-## 2. Cohort and unit of analysis
-
-The unit of analysis is the patient. A single locked manifest assigns each patient to train, validation, or test. No patient may occur in more than one split. The binary outcome is pCR.
-
-The code builds the manifest from the official BreastDCEDL I-SPY2 MinCrop metadata and treatment metadata. It resolves pretreatment, early post-contrast, late post-contrast, and tumor-mask NIfTI files.
-
-## 3. Inputs
-
-### Imaging inputs
-
-Three DCE-MRI phases are used:
-
-* Pretreatment or precontrast phase
-* Early post-contrast phase
-* Late post-contrast phase
-
-A tumor segmentation mask is used to define tumor and peritumoral regions.
-
-### Clinical inputs
-
-* Standardized age
-* Hormone receptor status
-* HER2 status
-* HR and HER2 interaction
-* MammaPrint value
-* MammaPrint missingness indicator
-* Premenopausal indicator
-* Postmenopausal indicator
-
-### Treatment inputs
-
-Binary or numeric indicators encode the recorded treatment regimen, including paclitaxel, trastuzumab, pertuzumab, carboplatin, pembrolizumab, neratinib, T-DM1, MK-2206, AMG 386, ABT 888, ganetespib, and ganitumab when present in source metadata.
-
-## 4. Preprocessing
-
-NIfTI images are converted from NiBabel spatial order to PyTorch depth-height-width order. Missing image phases are represented by zero volumes and an explicit phase-availability mask. Image intensity normalization uses robust reference statistics from an available phase, based on median and percentile-derived scale, followed by clipping.
-
-Volumes and masks are resized to a fixed 3D shape. Training augmentation applies spatial flips and phase-consistent intensity transformations to preserve contrast kinetics.
-
-Age standardization is estimated from the training cohort only. Missing tabular values receive learned missing-value embeddings.
-
-## 5. Models
-
-### Tabular baseline
-
-Each clinical and treatment feature is converted into a learned numerical token. Clinical and treatment type embeddings distinguish the two feature groups. A Transformer encoder produces a tabular summary representation followed by an MLP prediction head.
-
-### Image-only model
-
-Each DCE phase is processed sequentially by a 3D ConvNeXt backbone. At the final feature map, three regional representations are extracted:
-
-* Global breast or crop representation
-* Tumor representation
-* Peritumoral representation
-
-Phase and region embeddings are added. A Transformer integrates the resulting phase-region token sequence and produces the image summary representation.
-
-### Fusion model
-
-The image and tabular encoders are initialized from independently trained unimodal models. Bidirectional gated cross-attention lets image tokens attend to tabular context and tabular tokens attend to image context. The final classifier receives image embedding, tabular embedding, elementwise product, and absolute difference.
-
-Auxiliary image and tabular losses are retained during fusion training to discourage collapse of either modality.
-
-## 6. Optimization
-
-Models are trained with AdamW, cosine learning-rate decay, warmup, gradient accumulation, gradient clipping, automatic mixed precision when available, exponential moving average weights, and early stopping.
-
-Model selection is based only on validation AUPRC. Test performance is evaluated after model selection.
-
-## 7. Calibration
-
-A scalar temperature is fitted using validation logits and labels. Raw and calibrated test metrics are both exported. No test labels are used to fit calibration parameters.
-
-## 8. Primary analysis
-
-The primary comparison is:
+The official primary comparison is:
 
 ```text
-multimodal fusion minus clinical-treatment tabular baseline
+S10_C1_PLUS_MRI_STACK_NESTED
+minus
+S00_C1_RECALIBRATED_NESTED
 ```
 
-Metrics include:
+Both models are fitted within the same strict nested resampling framework. The principal estimand is improvement in Brier score / IPA, with AUROC, AUPRC, log loss, and calibration as secondary performance measures.
 
-* AUROC
-* AUPRC
-* Brier score
-* Log loss
-* Accuracy at threshold 0.5
-* Sensitivity and specificity at threshold 0.5
-* Calibration intercept and slope
-* Expected calibration error
+### Secondary and mechanistic analyses
 
-Paired stratified bootstrap resampling preserves class representation and compares models on identical resampled patients. The analysis reports point estimates and percentile 95% confidence intervals.
+The byte-exact v5 pipeline provides:
 
-Positive differences indicate improvement for AUROC and AUPRC. Negative differences indicate improvement for Brier score and log loss.
+- `T01`: clinical biology;
+- `T02`: clinical biology plus baseline-assigned treatment;
+- `T03`: T02 plus conventional MRI features;
+- `M10`: MRI-only six-channel Axial 3D model;
+- `D01-D06`: precontrast, early, late, enhancement, and washout ablations;
+- `D07-D09`: intratumoral and 0-5 mm peritumoral-region ablations;
+- `D10`: full six-channel end-to-end sensitivity model.
 
-## 9. Secondary analyses
+These analyses localize possible sources of MRI increment. They do not replace the primary S10-versus-S00 estimate. Multiplicity and exploratory interpretation must be acknowledged.
 
-* Fusion versus image-only model
-* HR-positive and HER2-negative subgroup
-* HER2-positive subgroup
-* Triple-negative subgroup
-* Decision-curve net benefit over clinically relevant thresholds
+## 3. Prediction time and leakage control
 
-Subgroup analyses are exploratory unless sufficient sample size and multiplicity control are prespecified.
+The intended prediction time is after treatment-arm assignment but before the first neoadjuvant dose. Permitted treatment fields must therefore be known at baseline. Variables derived from treatment completion, dose modification, toxicity, interim response, or any post-MRI event are prohibited.
 
-## 10. Required additions before a manuscript claim
+The wrapper performs a structural time-zero audit and writes a variable-level audit template. A completed manual treatment-time audit is required before any one-time locked-test analysis.
 
-1. Report exact cohort counts and event rates for every split.
-2. Confirm source split provenance and absence of leakage.
-3. Add repeated seeds or nested resampling for model-development uncertainty.
-4. Compare against simpler baselines such as penalized logistic regression and gradient boosting.
-5. Report confidence intervals for every principal metric.
-6. Inspect calibration curves and failure cases.
-7. Add external or temporally distinct validation when possible.
-8. Conduct ablation studies for region tokens, treatment variables, fusion, calibration, and auxiliary losses.
-9. Publish a model card and exact software environment.
-10. Obtain clinical coauthor review before making clinical-value claims.
+## 4. Inputs
+
+The executable requires only:
+
+```text
+manifest.csv
+research_cache/
+```
+
+The manifest contains the patient-level outcome, split, clinical variables, treatment variables, conventional MRI features, and cache identifiers. The research cache contains the preprocessed MRI volumes and masks required by the specified channel modes.
+
+No Model-Zoo workbook is required at runtime because the architecture and model ladder are frozen in the release.
+
+## 5. Frozen primary resampling design
+
+The v7.0.1 primary analysis uses:
+
+- 5 outer folds;
+- 3 fixed outer split seeds: `20260724`, `20260725`, `20260726`;
+- 4 inner folds within every outer-training set;
+- 3 fixed MRI initialization offsets: `0`, `1000`, `2000`;
+- fixed L2 logistic meta-model regularization `C=0.1`;
+- 120 maximum epochs and patience 20;
+- 5000 bootstrap replicates;
+- Nadeau-Bengio correction for repeated-cross-validation fold differences.
+
+The outer holdout is not used to train base models, fit recalibration, fit the stack, select a replacement initialization, or choose an epoch.
+
+## 6. Matched primary models
+
+### S00: matched clinical baseline
+
+Inner out-of-fold C1 probabilities are transformed to logits and used to fit a fixed L2 logistic recalibration model. The fitted recalibrator is applied to the outer-holdout C1 probability.
+
+### S10: clinical plus MRI stack
+
+The matched stack uses the C1 logit and the MRI-only ensemble logit. The fixed L2 logistic meta-model is trained only on inner out-of-fold predictions and then applied to the outer holdout.
+
+This matched construction is intended to isolate the incremental contribution of MRI rather than an advantage from different calibration procedures.
+
+## 7. MRI ensemble and numerical-collapse policy
+
+Each MRI-only ensemble member uses the same prespecified Axial 3D architecture with a different fixed initialization. Numerical collapse is evaluated only on inner-selection predictions.
+
+The frozen policy is:
+
+1. train the prespecified member;
+2. if the inner-selection probability distribution violates the frozen minimum-SD rule, perform one prespecified replacement attempt;
+3. if all attempts are finite but low variance, retain the attempt with the best inner-selection log loss;
+4. record the event, attempts, seeds, diagnostics, and selected member in the collapse audit.
+
+No outer-holdout label or metric is used by this policy.
+
+## 8. Metrics and inference
+
+Reported model metrics include:
+
+- AUROC;
+- AUPRC;
+- Brier score;
+- IPA;
+- log loss and log skill;
+- calibration intercept and slope;
+- probability-distribution diagnostics.
+
+Paired fold-level differences are calculated on identical outer-holdout patients. Repeated-CV uncertainty is summarized using the Nadeau-Bengio corrected standard error and two-sided confidence interval / p-value. Patient-level bootstrap summaries are supplementary and do not replace the corrected repeated-CV inference.
+
+## 9. Reproducibility controls
+
+The release fixes Python, NumPy, PyTorch, and CUDA seeds; disables cuDNN benchmarking and TF32; sets deterministic cuDNN behavior; defaults to zero DataLoader workers; and includes the resolved precision in an immutable run signature.
+
+The run records:
+
+- wrapper and component SHA-256 hashes;
+- manifest and cache signatures;
+- cohort/split/target signature;
+- Python, package, CUDA, cuDNN, and GPU information;
+- exact subprocess commands;
+- precision and worker count;
+- output hashes and scientific-validation status.
+
+Bitwise equality across different GPU and software stacks is not guaranteed. Scientific reproducibility means identical cohort and splits, identical frozen methods, compatible predictions/metrics, and the same substantive conclusion within declared numerical tolerances.
+
+## 10. Locked test and interpretation boundary
+
+The default full run produces the frozen internal-validation result and leaves the test split untouched. The one-time test analysis is available only for the v7.0.1 primary comparison after explicit confirmation and treatment-time governance.
+
+The architecture was fixed after prior model-development work. Strict nested resampling prevents leakage within the frozen rerun, but it cannot erase all earlier design-selection history. The locked test or an independent external cohort is therefore required for an independent confirmatory estimate.
+
+## 11. Final-result rule
+
+A result set is accepted only when `FINAL_RESULT_INDEX.json` reports a passed status, no missing models/folds, and no scientific-validation errors. Runs using `--quick` or `--allow-cohort-drift` are not final research results.
